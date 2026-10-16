@@ -24,9 +24,12 @@ private:
     SDL_Window* window;
     SDL_Renderer* renderer;
     SDL_Texture* test_texture; 
+    SDL_Texture* create_masked_texture(SDL_Surface* original_surface, SDL_Surface* mask_surface, SDL_Rect crop_area);
+
 
     std::vector<PuzzlePiece> pieces;
     PuzzlePiece* selected_piece;
+
 };
 
 #endif

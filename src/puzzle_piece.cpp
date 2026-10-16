@@ -6,26 +6,43 @@ PuzzlePiece::PuzzlePiece(int id, int src_x, int src_y, int width, int height, in
     this->is_locked = false;
     this->correct_x = src_x;
     this->correct_y = src_y;
-    this->src_rect = {src_x, src_y, width, height};
+
+    this->src_rect = {0, 0, width, height};
     this->dest_rect = {dest_x, dest_y, width, height};
 
-    // Kenar durumlarını sınıfın içindeki diziye kaydet
     this->edges[0] = e_top;
     this->edges[1] = e_right;
     this->edges[2] = e_bottom;
     this->edges[3] = e_left;
+
+    this->texture = nullptr ; 
 }
 
 PuzzlePiece::~PuzzlePiece() {}
 
-void PuzzlePiece::render(SDL_Renderer* renderer, SDL_Texture* texture) {
-    SDL_RenderCopy(renderer, texture, &src_rect, &dest_rect);
+
+
+void PuzzlePiece::render(SDL_Renderer* renderer) {
+    if (texture != nullptr) {
+        SDL_RenderCopy(renderer, texture, &src_rect, &dest_rect);
+    }
 }
 
 void PuzzlePiece::set_position(int x, int y) {
     if (!is_locked) {
         dest_rect.x = x;
         dest_rect.y = y;
+    }
+}
+
+void PuzzlePiece::set_texture(SDL_Texture* tex) {
+    this->texture = tex;
+}
+
+void PuzzlePiece::free_texture() {
+    if (texture != nullptr) {
+        SDL_DestroyTexture(texture);
+        texture = nullptr;
     }
 }
 

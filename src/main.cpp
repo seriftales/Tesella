@@ -5,7 +5,7 @@ int main(int argc, char* argv[]) {
 
     GameEngine engine;
 
-    if (!engine.initialize("Tesella", 1280, 720)) {
+    if (!engine.initialize("Tesella", 1600, 900)) {
         std::cerr << "Kritik Hata: Motor başlatılamadı. Program sonlandırılıyor." << std::endl;
         return -1; 
     }
