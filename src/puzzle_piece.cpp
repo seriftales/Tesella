@@ -1,16 +1,19 @@
 #include "../include/puzzle_piece.h"
-#include <cmath> 
+#include <cmath>
 
-PuzzlePiece::PuzzlePiece(int id, int src_x, int src_y, int width, int height, int dest_x, int dest_y) {
+PuzzlePiece::PuzzlePiece(int id, int src_x, int src_y, int width, int height, int dest_x, int dest_y, int e_top, int e_right, int e_bottom, int e_left) {
     this->id = id;
     this->is_locked = false;
-
     this->correct_x = src_x;
     this->correct_y = src_y;
-
     this->src_rect = {src_x, src_y, width, height};
-
     this->dest_rect = {dest_x, dest_y, width, height};
+
+    // Kenar durumlarını sınıfın içindeki diziye kaydet
+    this->edges[0] = e_top;
+    this->edges[1] = e_right;
+    this->edges[2] = e_bottom;
+    this->edges[3] = e_left;
 }
 
 PuzzlePiece::~PuzzlePiece() {}
@@ -36,7 +39,6 @@ bool PuzzlePiece::is_clicked(int mouse_x, int mouse_y) {
 
 void PuzzlePiece::check_snap(int threshold) {
     if (is_locked) return;
-
     int dx = dest_rect.x - correct_x;
     int dy = dest_rect.y - correct_y;
     double distance = std::sqrt((dx * dx) + (dy * dy));
@@ -48,10 +50,12 @@ void PuzzlePiece::check_snap(int threshold) {
     }
 }
 
-bool PuzzlePiece::get_is_locked() const {
-    return is_locked;
-}
+bool PuzzlePiece::get_is_locked() const { return is_locked; }
+int PuzzlePiece::get_id() const { return id; }
 
-int PuzzlePiece::get_id() const {
-    return id;
+int PuzzlePiece::get_edge(int side) const {
+    if (side >= 0 && side < 4) {
+        return edges[side];
+    }
+    return 0; 
 }

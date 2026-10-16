@@ -35,18 +35,60 @@ bool GameEngine::initialize(const char* title, int width, int height) {
         std::cerr << "Görsel yüklenemedi! Dosya yolunu kontrol edin. Hata: " << IMG_GetError() << std::endl;
         return false;
     }
-    for (int row = 0; row < 4; ++row) {
-        for (int col = 0; col < 4; ++col) {
-            int id = row * 4 + col;
-            int src_x = col * 150; 
-            int src_y = row * 150; 
-            
+    srand(static_cast<unsigned int>(time(NULL)));
+
+    int cols = 4 ; 
+    int rows = 4 ; 
+
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            int id = row * cols + col;
+            int src_x = col * 150;
+            int src_y = row * 150;
             int dest_x = 800 + (col * 30); 
             int dest_y = 100 + (row * 30); 
+
+            // 1. ÜST KENAR (Top)
+            int e_top = 0; // En üst satırsa düzdür (0)
+            if (row > 0) {
+                // Eğer üstte bir komşu varsa, o komşunun ALT (2. indeks) kenarının tam tersi olmalıdır
+                int top_neighbor_index = (row - 1) * cols + col;
+                e_top = pieces[top_neighbor_index].get_edge(2) * -1;
+            }
+
+            // 2. SOL KENAR (Left)
+            int e_left = 0; // En sol sütunsa düzdür (0)
+            if (col > 0) {
+                // Eğer solda bir komşu varsa, o komşunun SAĞ (1. indeks) kenarının tam tersi olmalıdır
+                int left_neighbor_index = row * cols + (col - 1);
+                e_left = pieces[left_neighbor_index].get_edge(1) * -1;
+            }
+
+            // 3. SAĞ KENAR (Right)
+            int e_right = 0;
+            if (col < cols - 1) {
+                // En sağda değilsek, rastgele olarak 1 (Çıkıntı) veya -1 (Girinti) ata
+                e_right = (rand() % 2 == 0) ? 1 : -1;
+            }
+
+            // 4. ALT KENAR (Bottom)
+            int e_bottom = 0;
+            if (row < rows - 1) {
+                // En altta değilsek, rastgele olarak 1 (Çıkıntı) veya -1 (Girinti) ata
+                e_bottom = (rand() % 2 == 0) ? 1 : -1;
+            }
+
+            // Parçayı belleğe tüm bu matematiksel kenar verileriyle birlikte ekle
+            pieces.emplace_back(id, src_x, src_y, 150, 150, dest_x, dest_y, e_top, e_right, e_bottom, e_left);
             
-            pieces.emplace_back(id, src_x, src_y, 150, 150, dest_x, dest_y);
+            std::cout << "Parça ID: " << id 
+                      << " | Üst: " << e_top 
+                      << " | Sağ: " << e_right 
+                      << " | Alt: " << e_bottom 
+                      << " | Sol: " << e_left << std::endl;
+        
+        
         }
-    
     }
 
     IMGUI_CHECKVERSION();
