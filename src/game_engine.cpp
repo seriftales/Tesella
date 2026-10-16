@@ -1,6 +1,9 @@
 #include "../include/game_engine.h"
 #include <iostream>
 #include <SDL2/SDL_image.h>
+#include <cstdlib>
+#include <ctime>
+#include <string> 
 
 GameEngine::GameEngine() {
     window = nullptr;
@@ -51,53 +54,58 @@ bool GameEngine::initialize(const char* title, int width, int height) {
             int dest_x = 800 + (col * 30); 
             int dest_y = 100 + (row * 30); 
 
-            // 1. ÜST KENAR (Top)
-            int e_top = 0; // En üst satırsa düzdür (0)
+            int e_top = 0; 
             if (row > 0) {
-                // Eğer üstte bir komşu varsa, o komşunun ALT (2. indeks) kenarının tam tersi olmalıdır
                 int top_neighbor_index = (row - 1) * cols + col;
                 e_top = pieces[top_neighbor_index].get_edge(2) * -1;
             }
 
-            // 2. SOL KENAR (Left)
-            int e_left = 0; // En sol sütunsa düzdür (0)
+            int e_left = 0;
             if (col > 0) {
-                // Eğer solda bir komşu varsa, o komşunun SAĞ (1. indeks) kenarının tam tersi olmalıdır
                 int left_neighbor_index = row * cols + (col - 1);
                 e_left = pieces[left_neighbor_index].get_edge(1) * -1;
             }
 
-            // 3. SAĞ KENAR (Right)
+           
             int e_right = 0;
             if (col < cols - 1) {
-                // En sağda değilsek, rastgele olarak 1 (Çıkıntı) veya -1 (Girinti) ata
                 e_right = (rand() % 2 == 0) ? 1 : -1;
             }
 
-            // 4. ALT KENAR (Bottom)
             int e_bottom = 0;
             if (row < rows - 1) {
-                // En altta değilsek, rastgele olarak 1 (Çıkıntı) veya -1 (Girinti) ata
                 e_bottom = (rand() % 2 == 0) ? 1 : -1;
             }
 
-            // Maske sistemini test etmek için geçici olarak tamamen BEYAZ (şeffaf olmayan) bir dummy maske oluşturuyoruz.
-            // İleride buraya kenar verilerine (e_top vb.) göre gerçek maske resimleri (PNG) yüklenecek.
-            SDL_Surface* dummy_mask = SDL_CreateRGBSurfaceWithFormat(0, piece_w, piece_h, 32, SDL_PIXELFORMAT_RGBA32);
-            SDL_FillRect(dummy_mask, NULL, SDL_MapRGBA(dummy_mask->format, 255, 255, 255, 255));
+            std::string mask_path = "assets/masks/mask_" + 
+                                    std::to_string(e_top) + "_" + 
+                                    std::to_string(e_right) + "_" + 
+                                    std::to_string(e_bottom) + "_" + 
+                                    std::to_string(e_left) + ".png";
+            
+            SDL_Surface* temp_mask = IMG_Load(mask_path.c_str());
+            if (!temp_mask) {
+                std::cerr << "Kritik Hata: Maske dosyasi bulunamadi! Yol: " << mask_path << std::endl;
+                return false; 
+            }
 
-            // Resimden kesilecek alan
-            SDL_Rect crop_area = {src_x, src_y, piece_w, piece_h};
+            SDL_Surface* format_mask = SDL_ConvertSurfaceFormat(temp_mask, SDL_PIXELFORMAT_RGBA32, 0);
+            SDL_FreeSurface(temp_mask);
+
+            int overlap_x = piece_w / 6 ;
+            int overlap_y = piece_h / 6 ;
+
+
+            SDL_Rect crop_area = {src_x - overlap_x, src_y - overlap_y, piece_w + (overlap_x * 2), piece_h + (overlap_y * 2)};
+
+            SDL_Surface* real_mask = SDL_CreateRGBSurfaceWithFormat(0, crop_area.w, crop_area.h, 32, SDL_PIXELFORMAT_RGBA32);
+            SDL_BlitScaled(format_mask, NULL, real_mask, NULL);
+            SDL_FreeSurface(format_mask); 
             
-            // Maskeleme fonksiyonumuzu çağırarak bu parçaya özel Texture ürettir
-            SDL_Texture* piece_texture = create_masked_texture(main_surface, dummy_mask, crop_area);
+            SDL_Texture* piece_texture = create_masked_texture(main_surface, real_mask, crop_area);
+            SDL_FreeSurface(real_mask); 
             
-            // İşimiz biten dummy maskeyi RAM'den sil
-            SDL_FreeSurface(dummy_mask);
-            
-            
-            // Parçayı belleğe tüm bu matematiksel kenar verileriyle birlikte ekle
-            pieces.emplace_back(id, src_x, src_y, piece_w, piece_h, dest_x, dest_y, e_top, e_right, e_bottom, e_left);
+            pieces.emplace_back(id, src_x - overlap_x, src_y - overlap_y, crop_area.w, crop_area.h, dest_x, dest_y, e_top, e_right, e_bottom, e_left);
             pieces.back().set_texture(piece_texture);
 
             std::cout << "Parça ID: " << id 
@@ -204,23 +212,40 @@ void GameEngine::clean() {
 SDL_Texture* GameEngine::create_masked_texture(SDL_Surface* original_surface, SDL_Surface* mask_surface, SDL_Rect crop_area) {
     SDL_Surface* masked_surface = SDL_CreateRGBSurfaceWithFormat(0, crop_area.w, crop_area.h, 32, SDL_PIXELFORMAT_RGBA32);
 
-    SDL_BlitSurface(original_surface, &crop_area, masked_surface, NULL);
+    SDL_FillRect(masked_surface, NULL, SDL_MapRGBA(masked_surface->format, 0, 0, 0, 0));
+
+    SDL_Rect src_rect = crop_area;
+    SDL_Rect dst_rect = {0, 0, crop_area.w, crop_area.h};
+
+    if (src_rect.x < 0) {
+        dst_rect.x = -src_rect.x; 
+        src_rect.w += src_rect.x;
+        src_rect.x = 0;
+    }
+    if (src_rect.y < 0) {
+        dst_rect.y = -src_rect.y; 
+        src_rect.h += src_rect.y;
+        src_rect.y = 0;
+    }
+
+    SDL_BlitSurface(original_surface, &src_rect, masked_surface, &dst_rect);
 
     SDL_LockSurface(masked_surface);
     SDL_LockSurface(mask_surface);
 
-    Uint32* pixels = (Uint32*)masked_surface->pixels;
-    Uint32* mask_pixels = (Uint32*)mask_surface->pixels;
+    for (int y = 0; y < crop_area.h; ++y) {
+        Uint32* dest_row = (Uint32*)((Uint8*)masked_surface->pixels + y * masked_surface->pitch);
+        Uint32* mask_row = (Uint32*)((Uint8*)mask_surface->pixels + y * mask_surface->pitch);
 
-    int pixel_count = crop_area.w * crop_area.h;
-    for (int i = 0; i < pixel_count; ++i) {
-        Uint8 r, g, b, a;
-        SDL_GetRGBA(mask_pixels[i], mask_surface->format, &r, &g, &b, &a);
+        for (int x = 0; x < crop_area.w; ++x) {
+            Uint8 r, g, b, a;
+            SDL_GetRGBA(mask_row[x], mask_surface->format, &r, &g, &b, &a);
 
-        if (r < 10 && g < 10 && b < 10) {
-            Uint8 pr, pg, pb, pa;
-            SDL_GetRGBA(pixels[i], masked_surface->format, &pr, &pg, &pb, &pa);
-            pixels[i] = SDL_MapRGBA(masked_surface->format, pr, pg, pb, 0);
+            if (r < 10 && g < 10 && b < 10) {
+                Uint8 pr, pg, pb, pa;
+                SDL_GetRGBA(dest_row[x], masked_surface->format, &pr, &pg, &pb, &pa);
+                dest_row[x] = SDL_MapRGBA(masked_surface->format, pr, pg, pb, 0);
+            }
         }
     }
 
@@ -228,9 +253,7 @@ SDL_Texture* GameEngine::create_masked_texture(SDL_Surface* original_surface, SD
     SDL_UnlockSurface(masked_surface);
 
     SDL_Texture* final_texture = SDL_CreateTextureFromSurface(renderer, masked_surface);
-
     SDL_SetTextureBlendMode(final_texture, SDL_BLENDMODE_BLEND);
-
     SDL_FreeSurface(masked_surface);
 
     return final_texture;
