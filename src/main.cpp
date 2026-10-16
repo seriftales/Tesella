@@ -1,16 +1,17 @@
 #include <iostream>
-#include <SDL2/SDL.h>
+#include "game_engine.h"
 
 int main(int argc, char* argv[]) {
-    // SDL'in video (grafik) alt sistemini başlatmayı dene
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        std::cerr << "SDL baslatilamadi Hata: " << SDL_GetError() << std::endl;
-        return 1;
+
+    GameEngine engine;
+
+    if (!engine.initialize("Tesella", 1280, 720)) {
+        std::cerr << "Kritik Hata: Motor başlatılamadı. Program sonlandırılıyor." << std::endl;
+        return -1; 
     }
+    engine.run();
 
-    std::cout << "Test Basarili: SDL2 kütüphanesi baglandi ve Tesella motoru baslatildi!" << std::endl;
+    engine.clean();
 
-    // Belleği temizle ve çık
-    SDL_Quit();
-    return 0;
+    return 0; 
 }

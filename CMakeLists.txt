@@ -18,8 +18,7 @@ find_package(SDL2_mixer REQUIRED)
 include_directories(include)
 
 # Çalıştırılabilir dosyamızı oluştur 
-add_executable(tesella src/main.cpp)
-
+add_executable(tesella src/main.cpp src/game_engine.cpp)
 # Link
 target_link_libraries(tesella 
     ${SDL2_LIBRARIES} 
