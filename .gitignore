@@ -1,0 +1,12 @@
+# Derleme çıktıları
+build/
+bin/
+*.o
+*.out
+*.exe
+
+# İşletim sistemi ve Editör dosyaları
+.vscode/
+.idea/
+.DS_Store
+__pycache__/
