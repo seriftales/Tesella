@@ -13,7 +13,6 @@ find_package(SDL2_mixer REQUIRED)
 include_directories(include)
 include_directories(vendor/imgui)
 
-# ImGui kaynak dosyalarını bir değişkende topluyoruz
 file(GLOB IMGUI_SOURCES 
     "vendor/imgui/imgui.cpp"
     "vendor/imgui/imgui_draw.cpp"
@@ -23,8 +22,7 @@ file(GLOB IMGUI_SOURCES
     "vendor/imgui/imgui_impl_sdlrenderer2.cpp"
 )
 
-# Çalıştırılabilir dosyamıza hem kendi kodlarımızı hem de ImGui kodlarını ekliyoruz
-add_executable(tesella src/main.cpp src/game_engine.cpp ${IMGUI_SOURCES})
+add_executable(tesella src/main.cpp src/game_engine.cpp src/puzzle_piece.cpp ${IMGUI_SOURCES})
 
 target_link_libraries(tesella 
     ${SDL2_LIBRARIES} 
