@@ -11,3 +11,13 @@ make
 ./tesella
 
 
+imgui kurulum 
+
+mkdir -p vendor/imgui
+git clone -b docking https://github.com/ocornut/imgui.git temp_imgui
+cp temp_imgui/*.h temp_imgui/*.cpp vendor/imgui/
+cp temp_imgui/backends/imgui_impl_sdl2.* temp_imgui/backends/imgui_impl_sdlrenderer2.* vendor/imgui/
+rm -rf temp_imgui
+
+
+
