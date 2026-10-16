@@ -1,0 +1,11 @@
+terminalde şu komutu çalıştırarak ana kütüphaneyi ve resim, font, ses eklentilerini kur:
+
+sudo apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev
+
+Terminalde kök dizinde (~/Tesella) olduğunu varsayarak sırasıyla şu komutları girmelisin:
+
+cd build
+cmake ..
+make
+./tesella
+
