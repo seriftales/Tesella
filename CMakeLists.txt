@@ -22,7 +22,7 @@ file(GLOB IMGUI_SOURCES
     "vendor/imgui/imgui_impl_sdlrenderer2.cpp"
 )
 
-add_executable(tesella src/main.cpp src/game_engine.cpp src/puzzle_piece.cpp ${IMGUI_SOURCES})
+add_executable(tesella src/main.cpp src/game_engine.cpp src/puzzle_piece.cpp src/puzzle_generator.cpp src/input_handler.cpp ${IMGUI_SOURCES})
 
 target_link_libraries(tesella 
     ${SDL2_LIBRARIES} 

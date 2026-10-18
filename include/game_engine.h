@@ -31,7 +31,6 @@ private:
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* test_texture = nullptr; 
-    SDL_Texture* create_masked_texture(SDL_Surface* original_surface, SDL_Surface* mask_surface, SDL_Rect crop_area);
 
     std::vector<PuzzlePiece> pieces;
     PuzzlePiece* selected_piece = nullptr;
