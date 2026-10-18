@@ -11,9 +11,17 @@ GameEngine::GameEngine() {
     test_texture = nullptr;
     selected_piece = nullptr; 
     is_running = false;
+    locked_pieces_count = 0; 
+    is_victory = false;
+    board_offset_x = 150;
+    board_offset_y = 100;
+    board_w = 0;
+    board_h = 0;
 }
 
-GameEngine::~GameEngine() {}
+GameEngine::~GameEngine() {
+    // Yıkıcı metotta değişken sıfırlanmaz, temizlik clean() içinde yapılır.
+}
 
 bool GameEngine::initialize(const char* title, int width, int height) {
 
@@ -38,21 +46,34 @@ bool GameEngine::initialize(const char* title, int width, int height) {
 
     srand(static_cast<unsigned int>(time(NULL)));
 
-    int cols = 4 ; 
-    int rows = 4 ; 
+    int cols = 4; 
+    int rows = 4; 
 
     int piece_w = main_surface->w / cols;
     int piece_h = main_surface->h / rows;
 
-    pieces.reserve(16) ; 
+    board_offset_x = 150; 
+    board_offset_y = 100; 
 
+    // KRİTİK DÜZELTME: Başındaki 'int' kaldırıldı! Artık doğrudan sınıf üyesi olan board_w ve board_h güncelleniyor.
+    // Çerçeve tam olarak yüklenen resmin (main_surface) boyutunda olacak.
+    board_w = main_surface->w;
+    board_h = main_surface->h;
+
+    std::cout << "Resim Genişliği (Çerçeve): " << board_w << ", Resim Yüksekliği (Çerçeve): " << board_h << std::endl;
+    std::cout << "Parça Genişliği: " << piece_w << ", Parça Yüksekliği: " << piece_h << std::endl;
+
+    pieces.reserve(cols * rows);
+    
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
             int id = row * cols + col;
             int src_x = col * piece_w;
             int src_y = row * piece_h;
-            int dest_x = 800 + (col * 30); 
-            int dest_y = 100 + (row * 30); 
+            
+            // Parçaları çerçevenin sağ tarafına dağıtıyoruz
+            int dest_x = board_offset_x + board_w + 80 + (col * 40); 
+            int dest_y = board_offset_y + (row * 40); 
 
             int e_top = 0; 
             if (row > 0) {
@@ -66,7 +87,6 @@ bool GameEngine::initialize(const char* title, int width, int height) {
                 e_left = pieces[left_neighbor_index].get_edge(1) * -1;
             }
 
-           
             int e_right = 0;
             if (col < cols - 1) {
                 e_right = (rand() % 2 == 0) ? 1 : -1;
@@ -92,9 +112,8 @@ bool GameEngine::initialize(const char* title, int width, int height) {
             SDL_Surface* format_mask = SDL_ConvertSurfaceFormat(temp_mask, SDL_PIXELFORMAT_RGBA32, 0);
             SDL_FreeSurface(temp_mask);
 
-            int overlap_x = piece_w / 6 ;
-            int overlap_y = piece_h / 6 ;
-
+            int overlap_x = piece_w / 6;
+            int overlap_y = piece_h / 6;
 
             SDL_Rect crop_area = {src_x - overlap_x, src_y - overlap_y, piece_w + (overlap_x * 2), piece_h + (overlap_y * 2)};
 
@@ -105,16 +124,8 @@ bool GameEngine::initialize(const char* title, int width, int height) {
             SDL_Texture* piece_texture = create_masked_texture(main_surface, real_mask, crop_area);
             SDL_FreeSurface(real_mask); 
             
-            pieces.emplace_back(id, src_x - overlap_x, src_y - overlap_y, crop_area.w, crop_area.h, dest_x, dest_y, e_top, e_right, e_bottom, e_left);
+            pieces.emplace_back(id, src_x - overlap_x, src_y - overlap_y, crop_area.w, crop_area.h, dest_x, dest_y, board_offset_x, board_offset_y, e_top, e_right, e_bottom, e_left);
             pieces.back().set_texture(piece_texture);
-
-            std::cout << "Parça ID: " << id 
-                      << " | Üst: " << e_top 
-                      << " | Sağ: " << e_right 
-                      << " | Alt: " << e_bottom 
-                      << " | Sol: " << e_left << std::endl;
-        
-        
         }
     }
 
@@ -127,9 +138,10 @@ bool GameEngine::initialize(const char* title, int width, int height) {
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
 
+    locked_pieces_count = 0;
+    is_victory = false;
     is_running = true;
     return true;
-    
 }
 
 void GameEngine::run() {
@@ -151,7 +163,7 @@ void GameEngine::run() {
                 int mouse_y = event.button.y;
 
                 for (auto it = pieces.rbegin(); it != pieces.rend(); ++it) {
-                    if (it->is_clicked(mouse_x, mouse_y) && !it->get_is_locked()) {
+                    if (!it->get_is_locked() && it->is_clicked(mouse_x, mouse_y)) {
                         selected_piece = &(*it); 
                         break; 
                     }
@@ -159,12 +171,22 @@ void GameEngine::run() {
             }
             else if (event.type == SDL_MOUSEMOTION) {
                 if (selected_piece != nullptr) {
-                    selected_piece->set_position(event.motion.x - 75, event.motion.y - 75);
+                    // Sabit -100 yerine parçanın dinamik genişlik ve yüksekliğinin tam ortasından tutuyoruz
+                    int center_offset_x = selected_piece->get_width() / 2;
+                    int center_offset_y = selected_piece->get_height() / 2;
+                    selected_piece->set_position(event.motion.x - center_offset_x, event.motion.y - center_offset_y);
                 }
             }
             else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) {
                 if (selected_piece != nullptr) {
-                    selected_piece->check_snap(30); 
+                    // Parça yerine yaklaştığında (50 piksel tolerans) otomatik kilitlenir ve sayacı artırır
+                    if (selected_piece->check_snap(50)) {
+                        locked_pieces_count++; 
+                        std::cout << "Parca kilitlendi! Toplam: " << locked_pieces_count << " / " << pieces.size() << std::endl;
+                        if (locked_pieces_count >= static_cast<int>(pieces.size())) {
+                            is_victory = true; 
+                        }
+                    }
                     selected_piece = nullptr; 
                 }
             }
@@ -175,20 +197,38 @@ void GameEngine::run() {
         ImGui::NewFrame();
 
         ImGui::Begin("Tesella Kontrol Paneli");
-        ImGui::Text("Gorsel parcalandi ve GPU ile ciziliyor.");
+        if (is_victory) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "TEBRIKLER! YAPBOZ TAMAMLANDI!");
+        } else {
+            ImGui::Text("Kilitlenen Parca: %d / %d", locked_pieces_count, static_cast<int>(pieces.size()));
+        }
         ImGui::End();
         ImGui::Render();
 
         SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
         SDL_RenderClear(renderer);
 
+        // Gri hedef çerçeve tam olarak yüklenen resmin boyutunda (board_w x board_h) çiziliyor
+        SDL_SetRenderDrawColor(renderer, 45, 45, 45, 255); 
+        SDL_Rect board_rect = {board_offset_x, board_offset_y, board_w, board_h}; 
+        SDL_RenderFillRect(renderer, &board_rect);
+        SDL_SetRenderDrawColor(renderer, 120, 120, 120, 255); 
+        SDL_RenderDrawRect(renderer, &board_rect);
+
+        // Önce kilitlenmiş parçaları alta çiz, kilitlenmemişleri üste çiz ki altta kalmasınlar
         for (auto& piece : pieces) {
-            piece.render(renderer);
+            if (piece.get_is_locked()) {
+                piece.render(renderer);
+            }
+        }
+        for (auto& piece : pieces) {
+            if (!piece.get_is_locked()) {
+                piece.render(renderer);
+            }
         }
 
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
         SDL_RenderPresent(renderer);
-        
     } 
 }
 

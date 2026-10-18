@@ -19,17 +19,22 @@ public:
     void clean();
 
 private:
-    bool is_running;
+    bool is_running = false;
+    int locked_pieces_count = 0; 
+    bool is_victory = false;         
+
+    int board_offset_x = 150;
+    int board_offset_y = 100;
+    int board_w = 0;
+    int board_h = 0;
     
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-    SDL_Texture* test_texture; 
+    SDL_Window* window = nullptr;
+    SDL_Renderer* renderer = nullptr;
+    SDL_Texture* test_texture = nullptr; 
     SDL_Texture* create_masked_texture(SDL_Surface* original_surface, SDL_Surface* mask_surface, SDL_Rect crop_area);
 
-
     std::vector<PuzzlePiece> pieces;
-    PuzzlePiece* selected_piece;
-
+    PuzzlePiece* selected_piece = nullptr;
 };
 
 #endif
