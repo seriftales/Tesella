@@ -36,7 +36,7 @@ private:
     void update_menu_preview(int index);
 
     GameState current_state = GameState::MAIN_MENU;
-    char username_buffer[64] = "kaan";
+    char username_buffer[64] = "test";
     std::string status_message = "";
 
     std::vector<std::string> available_images;

@@ -31,7 +31,7 @@ void GameEngine::scan_images_directory() {
         if (entry.is_regular_file()) {
             std::string filename = entry.path().filename().string();
             
-            if (filename == "menu_bg.jpg" || filename == "menu.png" || filename == "debug_grid.png") {
+            if (filename == "menu.png" ) {
                 continue;
             }
 
@@ -98,7 +98,7 @@ void GameEngine::start_new_game() {
     
     current_state = GameState::PLAYING;
     status_message = "Yeni oyun baslatildi: " + current_image_path;
-    Mix_HaltMusic(); // Oyuna girildiğinde menü müziğini sustur
+    Mix_HaltMusic(); 
 }
 
 bool GameEngine::save_game() {
@@ -191,7 +191,7 @@ bool GameEngine::load_game() {
     elapsed_seconds = saved_elapsed_seconds;
     current_state = GameState::PLAYING;
     status_message = "Kayitli oyun yuklendi!";
-    Mix_HaltMusic(); // Kayıtlı oyuna girildiğinde menü müziğini sustur
+    Mix_HaltMusic();
     return true;
 }
 
@@ -213,8 +213,7 @@ bool GameEngine::initialize(const char* title, int width, int height) {
     win_w = width;
     win_h = height;
 
-    window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
-    if (!window) return false;
+    window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_FULLSCREEN_DESKTOP);    if (!window) return false;
 
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!renderer) return false;
@@ -328,7 +327,7 @@ void GameEngine::run() {
             }
             ImGui::EndChild();
 
-            ImGui::SliderInt("Zorluk (NxN)", &grid_size, 2, 8);
+            ImGui::SliderInt("Zorluk", &grid_size, 2, 8);
 
             if (ImGui::Button("Secili Gorselle Yeni Oyun Baslat", ImVec2(-1, 40))) {
                 start_new_game();

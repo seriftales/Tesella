@@ -12,7 +12,6 @@ void InputHandler::handle_mouse_event(
     int window_h,
     bool& out_piece_snapped
 ) {
-    // Tıklama anındaki tutuş farkını (offset) koruyan statik değişkenler
     static int drag_offset_x = 0;
     static int drag_offset_y = 0;
 
@@ -30,7 +29,6 @@ void InputHandler::handle_mouse_event(
 
                 selected_piece = &pieces.back();
 
-                // 2. MADDE ÇÖZÜMÜ: Parçanın merkeze zıplamasını önlemek için tutulan noktayı kaydet
                 drag_offset_x = mouse_x - selected_piece->get_x();
                 drag_offset_y = mouse_y - selected_piece->get_y();
                 break;
@@ -42,7 +40,6 @@ void InputHandler::handle_mouse_event(
             int new_x = event.motion.x - drag_offset_x;
             int new_y = event.motion.y - drag_offset_y;
 
-            // 1. MADDE ÇÖZÜMÜ: Parçanın pencere sınırlarından dışarı çıkmasını engelle (Clamping)
             int max_x = std::max(0, window_w - selected_piece->get_width());
             int max_y = std::max(0, window_h - selected_piece->get_height());
 
@@ -56,8 +53,7 @@ void InputHandler::handle_mouse_event(
         if (selected_piece != nullptr) {
             if (selected_piece->check_snap(50)) {
                 locked_pieces_count++;
-                out_piece_snapped = true; // Sesi tetikle!
-                std::cout << "Parca kilitlendi! Toplam: " << locked_pieces_count << " / " << pieces.size() << std::endl;
+                out_piece_snapped = true; 
                 if (locked_pieces_count >= static_cast<int>(pieces.size())) {
                     is_victory = true;
                 }
