@@ -31,9 +31,18 @@ private:
     bool has_save_file() const;
     std::string get_save_path() const;
 
+    void scan_images_directory();
+    void update_menu_preview(int index);
+
     GameState current_state = GameState::MAIN_MENU;
-    char username_buffer[64] = "kaan"; // Varsayılan kullanıcı adı
+    char username_buffer[64] = "kaan";
     std::string status_message = "";
+
+    std::vector<std::string> available_images;
+    int selected_image_index = 0;
+    SDL_Texture* menu_preview_texture = nullptr;
+    SDL_Texture* menu_bg_texture = nullptr; 
+
 
     bool is_running = false;
     int locked_pieces_count = 0; 
@@ -41,7 +50,7 @@ private:
     bool show_hint = false;
 
     int grid_size = 4;
-    std::string current_image_path = "assets/images/debug_grid.png";
+    std::string current_image_path = "";
 
     Uint32 start_ticks = 0;
     float saved_elapsed_seconds = 0.0f;
@@ -58,6 +67,7 @@ private:
 
     std::vector<PuzzlePiece> pieces;
     PuzzlePiece* selected_piece = nullptr;
+
 };
 
 #endif

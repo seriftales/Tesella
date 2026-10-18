@@ -63,7 +63,6 @@ bool PuzzleGenerator::generate_pieces(
 
             int e_top = 0, e_right = 0, e_bottom = 0, e_left = 0;
 
-            // EĞER KAYITTAN YÜKLENİYORSA KAYITLI KENARLARI KULLAN, YOKSA RASTGELE ÜRET
             if (custom_edges != nullptr && id < static_cast<int>(custom_edges->size())) {
                 e_top    = (*custom_edges)[id][0];
                 e_right  = (*custom_edges)[id][1];
@@ -116,7 +115,6 @@ bool PuzzleGenerator::generate_pieces(
 
     SDL_FreeSurface(main_surface);
 
-    // Sadece yeni oyunda rastgele karıştır, kayıttan yüklenirken sırayı bozma
     if (custom_edges == nullptr) {
         std::random_device rd;
         std::mt19937 g(rd());

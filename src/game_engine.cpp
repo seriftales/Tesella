@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <algorithm>
 #include <array>
 #include <SDL2/SDL_image.h>
 
@@ -21,7 +22,55 @@ bool GameEngine::has_save_file() const {
     return file.good();
 }
 
+void GameEngine::scan_images_directory() {
+    available_images.clear();
+    std::string dir_path = "assets/images/puzzle";
+    std::filesystem::create_directories(dir_path);
+
+    for (const auto& entry : std::filesystem::directory_iterator(dir_path)) {
+        if (entry.is_regular_file()) {
+            std::string ext = entry.path().extension().string();
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+            if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp") {
+                available_images.push_back(entry.path().string());
+            }
+        }
+    }
+
+    std::sort(available_images.begin(), available_images.end());
+
+    if (!available_images.empty()) {
+        selected_image_index = 0;
+        current_image_path = available_images[0];
+        update_menu_preview(0);
+    } else {
+        status_message = "UYARI: assets/images/puzzle klasorunde hic resim bulunamadi!";
+    }
+}
+
+void GameEngine::update_menu_preview(int index) {
+    if (index < 0 || index >= static_cast<int>(available_images.size())) return;
+
+    if (menu_preview_texture != nullptr) {
+        SDL_DestroyTexture(menu_preview_texture);
+        menu_preview_texture = nullptr;
+    }
+
+    SDL_Surface* surf = IMG_Load(available_images[index].c_str());
+    if (surf) {
+        menu_preview_texture = SDL_CreateTextureFromSurface(renderer, surf);
+        SDL_FreeSurface(surf);
+    }
+}
+
 void GameEngine::start_new_game() {
+    if (available_images.empty()) {
+        status_message = "HATA: Oynanacak resim secilmedi!";
+        return;
+    }
+
+    current_image_path = available_images[selected_image_index];
+
     for (auto& piece : pieces) {
         piece.free_texture();
     }
@@ -41,7 +90,7 @@ void GameEngine::start_new_game() {
         nullptr
     );
     current_state = GameState::PLAYING;
-    status_message = "Yeni oyun baslatildi.";
+    status_message = "Yeni oyun baslatildi: " + current_image_path;
 }
 
 bool GameEngine::save_game() {
@@ -49,12 +98,10 @@ bool GameEngine::save_game() {
     std::ofstream file(get_save_path());
     if (!file.is_open()) return false;
 
-    // 1. Genel oyun bilgilerini yaz
     file << current_image_path << "\n";
     file << grid_size << " " << locked_pieces_count << " " << is_victory << " " << elapsed_seconds << "\n";
     file << pieces.size() << "\n";
 
-    // 2. Her parçanın ID, konum, kilit durumu ve 4 kenar bilgisini yaz (Çizim sırasıyla)
     for (const auto& p : pieces) {
         file << p.get_id() << " "
              << p.get_x() << " "
@@ -66,7 +113,7 @@ bool GameEngine::save_game() {
              << p.get_edge(3) << "\n";
     }
 
-    status_message = "Oyun basariyla kaydedildi: " + get_save_path();
+    status_message = "Oyun kaydedildi: " + get_save_path();
     return true;
 }
 
@@ -105,7 +152,6 @@ bool GameEngine::load_game() {
     }
     selected_piece = nullptr;
 
-    // Kayıtlı kenar kalıplarını kullanarak dokuları yeniden üret
     if (!PuzzleGenerator::generate_pieces(
         renderer, current_image_path,
         grid_size, grid_size,
@@ -114,10 +160,10 @@ bool GameEngine::load_game() {
         preview_texture, pieces,
         &custom_edges
     )) {
+        status_message = "HATA: Kayitli oyunun resmi bulunamadi: " + current_image_path;
         return false;
     }
 
-    // Üretilen parçaları kayıttaki Z-Order (çizim sırası) ve koordinatlarına göre yerleştir
     std::vector<PuzzlePiece> ordered_pieces;
     ordered_pieces.reserve(count);
 
@@ -149,9 +195,16 @@ bool GameEngine::initialize(const char* title, int width, int height) {
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!renderer) return false;
 
+    menu_bg_texture = IMG_LoadTexture(renderer, "assets/images/menu.jpg");
+    if (!menu_bg_texture) {
+        std::cout << "Bilgi: 'assets/images/menu.jpg' bulunamadi, duz renk arka plan kullanilacak." << std::endl;
+    }
+
     if (!(IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) & (IMG_INIT_PNG | IMG_INIT_JPG))) return false;
 
     std::filesystem::create_directories("saves");
+    
+    scan_images_directory();
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -172,18 +225,16 @@ void GameEngine::run() {
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT) {
-                if (current_state == GameState::PLAYING) save_game(); // Çıkarken otomatik kaydet
+                if (current_state == GameState::PLAYING) save_game();
                 is_running = false;
             }
 
             ImGuiIO& io = ImGui::GetIO();
             if (io.WantCaptureMouse) continue;
 
-            // Sadece PLAYING durumundayken fareyle yapboz parçalarını hareket ettir
             if (current_state == GameState::PLAYING) {
                 int prev_locked = locked_pieces_count;
                 InputHandler::handle_mouse_event(event, pieces, selected_piece, locked_pieces_count, is_victory);
-                // Her parça kilitlendiğinde otomatik kaydet (Auto-Save)
                 if (locked_pieces_count > prev_locked) {
                     save_game();
                 }
@@ -198,43 +249,75 @@ void GameEngine::run() {
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        // ==================== DURUM 1: ANA MENÜ ====================
+        // ==================== DURUM 1: ANA MENÜ VE GÖRSEL SEÇİM EKRANI ====================
         if (current_state == GameState::MAIN_MENU) {
-            ImGui::SetNextWindowPos(ImVec2(390, 200), ImGuiCond_Always);
-            ImGui::SetNextWindowSize(ImVec2(500, 320), ImGuiCond_Always);
-            ImGui::Begin("TESELLA - ANA MENU", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+            ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+            ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+            ImGui::SetNextWindowSize(ImVec2(740, 480), ImGuiCond_Always);
+            ImGui::SetNextWindowBgAlpha(0.85f);
 
-            ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Hos Geldiniz! Lutfen kullanici adinizi girin:");
+            ImGui::Begin("ANA MENU VE GORSEL GALERISI", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
+
+            ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "1. Oyuncu Profili:");
             ImGui::InputText("Kullanici Adi", username_buffer, IM_ARRAYSIZE(username_buffer));
-            ImGui::Separator();
 
-            bool save_exists = has_save_file();
-            if (save_exists) {
+            if (has_save_file()) {
                 ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.5f, 1.0f), "[!] '%s' icin kayitli bir oyun bulundu.", username_buffer);
-                if (ImGui::Button("Kaldigin Yerden Devam Et (Load Game)", ImVec2(-1, 40))) {
+                if (ImGui::Button("Kaldigin Yerden Devam Et ", ImVec2(-1, 35))) {
                     load_game();
                 }
             } else {
-                ImGui::TextDisabled("Bu kullanici icin henuz kayitli bir oyun yok.");
+                ImGui::TextDisabled("Bu kullanici icin kayitli oyun bulunmuyor.");
             }
 
-            ImGui::Spacing();
             ImGui::Separator();
-            ImGui::Text("Yeni Oyun Ayarlari:");
-            ImGui::SliderInt("Zorluk (NxN Izgara)", &grid_size, 2, 8);
+            ImGui::Spacing();
 
-            if (ImGui::Button("Yeni Oyun Baslat", ImVec2(-1, 40))) {
-                start_new_game();
-                save_game(); // Yeni oyunu hemen kaydet
+            ImGui::Columns(2, "GalleryColumns", true);
+            ImGui::SetColumnWidth(0, 420);
+
+            ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "2. Yapboz Gorseli ve Zorluk Secimi:");
+            if (ImGui::Button("Klasoru Yenile ")) {
+                scan_images_directory();
             }
 
-            ImGui::Spacing();
-            if (ImGui::Button("Oyundan Cik", ImVec2(-1, 30))) {
+            ImGui::BeginChild("ImageList", ImVec2(0, 160), true);
+            for (int i = 0; i < static_cast<int>(available_images.size()); ++i) {
+                std::string filename = std::filesystem::path(available_images[i]).filename().string();
+                bool is_selected = (selected_image_index == i);
+                if (ImGui::Selectable(filename.c_str(), is_selected)) {
+                    if (selected_image_index != i) {
+                        selected_image_index = i;
+                        update_menu_preview(i); 
+                    }
+                }
+            }
+            ImGui::EndChild();
+
+            ImGui::SliderInt("Zorluk (NxN)", &grid_size, 2, 8);
+
+            if (ImGui::Button("Secili Gorselle Yeni Oyun Baslat", ImVec2(-1, 40))) {
+                start_new_game();
+                save_game();
+            }
+
+            ImGui::NextColumn();
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Secilen Gorsel Onizlemesi:");
+            if (menu_preview_texture != nullptr) {
+                ImGui::Image((ImTextureID)(intptr_t)menu_preview_texture, ImVec2(240, 240));
+            } else {
+                ImGui::Dummy(ImVec2(240, 240));
+                ImGui::TextDisabled("Onizleme Yok");
+            }
+
+            ImGui::Columns(1);
+            ImGui::Separator();
+
+            if (ImGui::Button("Oyundan Cik", ImVec2(150, 30))) {
                 is_running = false;
             }
-
             if (!status_message.empty()) {
-                ImGui::Separator();
+                ImGui::SameLine();
                 ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%s", status_message.c_str());
             }
 
@@ -244,6 +327,7 @@ void GameEngine::run() {
         else if (current_state == GameState::PLAYING) {
             ImGui::Begin("Tesella Kontrol Paneli");
             ImGui::Text("Aktif Oyuncu: %s", username_buffer);
+            ImGui::Text("Gorsel: %s", std::filesystem::path(current_image_path).filename().string().c_str());
             ImGui::Separator();
 
             if (is_victory) {
@@ -255,7 +339,7 @@ void GameEngine::run() {
             }
 
             ImGui::Separator();
-            ImGui::Checkbox("Ipucu Resmini Goster (Hayalet Mod)", &show_hint);
+            ImGui::Checkbox("Ipucu Resmini Goster", &show_hint);
 
             if (ImGui::Button("Oyunu Kaydet")) {
                 save_game();
@@ -278,7 +362,13 @@ void GameEngine::run() {
         SDL_SetRenderDrawColor(renderer, 25, 25, 30, 255);
         SDL_RenderClear(renderer);
 
-        // Sadece PLAYING modundayken oyun tahtasını ve parçaları çiz
+        if (current_state == GameState::MAIN_MENU) {
+            if (menu_bg_texture != nullptr) {
+                SDL_RenderCopy(renderer, menu_bg_texture, NULL, NULL);
+            }
+        }
+
+
         if (current_state == GameState::PLAYING) {
             SDL_SetRenderDrawColor(renderer, 45, 45, 45, 255); 
             SDL_Rect board_rect = {board_offset_x, board_offset_y, board_w, board_h}; 
@@ -315,7 +405,13 @@ void GameEngine::clean() {
     if (preview_texture != nullptr) {
         SDL_DestroyTexture(preview_texture);
     }
-    
+    if (menu_preview_texture != nullptr) {
+        SDL_DestroyTexture(menu_preview_texture);
+    }
+    if (menu_bg_texture != nullptr) {
+        SDL_DestroyTexture(menu_bg_texture);
+    }
+
     IMG_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
