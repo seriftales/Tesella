@@ -14,7 +14,7 @@
 
 ---
 
-## 📥 İndirme ve Oynama 
+## İndirme ve Oynama 
 
 Oyunu kaynak koddan derlemeden doğrudan oynamak isteyen Windows kullanıcıları için hazır çalıştırılabilir paket yayınlanmıştır:
 
@@ -24,7 +24,7 @@ Oyunu kaynak koddan derlemeden doğrudan oynamak isteyen Windows kullanıcılar�
 
 ---
 
-## 🛠️ Geliştiriciler İçin Kurulum ve Derleme
+## Geliştiriciler İçin Kurulum ve Derleme
 
 Projeyi kendi sisteminizde derlemek ve geliştirmek için aşağıdaki adımları takip edebilirsiniz.
 
@@ -33,7 +33,7 @@ Projeyi kendi sisteminizde derlemek ve geliştirmek için aşağıdaki adımlar�
 * **Yapılandırma Aracı:** CMake 
 * **Bağımlılıklar:** `SDL2`, `SDL2_image`, `SDL2_mixer`, `Dear ImGui` 
 
-### 🐧 Linux (Ubuntu / Debian) Kurulum ve Çalıştırma Adımları
+### Linux (Ubuntu / Debian) Kurulum ve Çalıştırma Adımları
 
 **1. Gerekli kütüphaneleri ve derleme araçlarını kurun:**
 
