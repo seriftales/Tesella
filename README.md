@@ -18,7 +18,7 @@
 
 Oyunu kaynak koddan derlemeden doğrudan oynamak isteyen Windows kullanıcıları için hazır çalıştırılabilir paket yayınlanmıştır:
 
-1. Sağ taraftaki **[Releases](../../releases)** sekmesine gidin (veya [buraya tıklayın](../../releases/latest)).
+1. Sağ taraftaki **[Releases](../../releases)** sekmesine gidin.
 2. En güncel sürümün altındaki **`Tesella_v.1.0_Windows.zip`** dosyasını indirin.
 3. ZIP arşivini klasöre çıkartın ve içerisindeki **`tesella.exe`** dosyasına çift tıklayarak oyuna başlayın. *(Gerekli tüm `.dll` bağımlılıkları pakete dahildir, ek kurulum gerektirmez).*
 
