@@ -64,7 +64,7 @@ make
 ### Windows Derleme Adımları
 Windows ortamında bağımlılıkları yönetmek için vcpkg kullanılmaktadır:
 
-***1. Gerekli kütüphaneleri vcpkg ile kurun:**
+**1. Gerekli kütüphaneleri vcpkg ile kurun:**
 ```bash 
 vcpkg install sdl2:x64-windows sdl2-image:x64-windows sdl2-mixer:x64-windows
 ```
