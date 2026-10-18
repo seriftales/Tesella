@@ -13,15 +13,12 @@ void InputHandler::handle_mouse_event(
         int mouse_x = event.button.x;
         int mouse_y = event.button.y;
 
-        // Vektörü sondan başa (en üstteki parçadan en alttakine) doğru tara
         for (int i = static_cast<int>(pieces.size()) - 1; i >= 0; --i) {
             if (!pieces[i].get_is_locked() && pieces[i].is_clicked(mouse_x, mouse_y)) {
-                // Z-INDEX (BRING TO FRONT): Tıklanan parçayı vektörün en sonuna (en üst katmana) taşı!
                 PuzzlePiece clicked_piece = pieces[i];
                 pieces.erase(pieces.begin() + i);
                 pieces.push_back(clicked_piece);
 
-                // Artık en sonda olduğu için adresini güvenle seçili parça yapabiliriz
                 selected_piece = &pieces.back();
                 break;
             }

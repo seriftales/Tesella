@@ -45,7 +45,6 @@ void PuzzlePiece::free_texture() {
 }
 
 bool PuzzlePiece::is_clicked(int mouse_x, int mouse_y) {
-    // Sadece parçanın ana gövdesine (overlap harici iç kısmına) tıklandığında algıla ki şeffaf boşluklar yanıltmasın
     int pad_x = dest_rect.w / 8;
     int pad_y = dest_rect.h / 8;
     if (mouse_x >= (dest_rect.x + pad_x) && mouse_x <= (dest_rect.x + dest_rect.w - pad_x) &&
@@ -81,4 +80,15 @@ int PuzzlePiece::get_edge(int side) const {
         return edges[side];
     }
     return 0; 
+}
+
+int PuzzlePiece::get_x() const { return dest_rect.x; }
+int PuzzlePiece::get_y() const { return dest_rect.y; }
+
+void PuzzlePiece::set_locked_state(bool locked) {
+    this->is_locked = locked;
+    if (locked) {
+        dest_rect.x = correct_x;
+        dest_rect.y = correct_y;
+    }
 }

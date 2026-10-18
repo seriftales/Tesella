@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <array>
 #include <SDL2/SDL.h>
 #include "puzzle_piece.h"
 
@@ -14,7 +15,9 @@ public:
         int cols, int rows,
         int board_offset_x, int board_offset_y,
         int& out_board_w, int& out_board_h,
-        std::vector<PuzzlePiece>& out_pieces
+        SDL_Texture*& out_preview_texture,
+        std::vector<PuzzlePiece>& out_pieces,
+        const std::vector<std::array<int, 4>>* custom_edges = nullptr
     );
 
 private:
