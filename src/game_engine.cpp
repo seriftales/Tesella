@@ -29,6 +29,12 @@ void GameEngine::scan_images_directory() {
 
     for (const auto& entry : std::filesystem::directory_iterator(dir_path)) {
         if (entry.is_regular_file()) {
+            std::string filename = entry.path().filename().string();
+            
+            if (filename == "menu_bg.jpg" || filename == "menu.png" || filename == "debug_grid.png") {
+                continue;
+            }
+
             std::string ext = entry.path().extension().string();
             std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
             if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp") {
@@ -89,8 +95,10 @@ void GameEngine::start_new_game() {
         preview_texture, pieces,
         nullptr
     );
+    
     current_state = GameState::PLAYING;
     status_message = "Yeni oyun baslatildi: " + current_image_path;
+    Mix_HaltMusic(); // Oyuna girildiğinde menü müziğini sustur
 }
 
 bool GameEngine::save_game() {
@@ -113,7 +121,7 @@ bool GameEngine::save_game() {
              << p.get_edge(3) << "\n";
     }
 
-    status_message = "Oyun kaydedildi: " + get_save_path();
+    status_message = "Oyun kaydedildi: " ;
     return true;
 }
 
@@ -183,11 +191,27 @@ bool GameEngine::load_game() {
     elapsed_seconds = saved_elapsed_seconds;
     current_state = GameState::PLAYING;
     status_message = "Kayitli oyun yuklendi!";
+    Mix_HaltMusic(); // Kayıtlı oyuna girildiğinde menü müziğini sustur
     return true;
 }
 
+void GameEngine::play_snap_sound() {
+    if (snap_sfx) {
+        Mix_PlayChannel(-1, snap_sfx, 0);
+    }
+}
+
 bool GameEngine::initialize(const char* title, int width, int height) {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) return false;
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) return false;
+    if (!(IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) & (IMG_INIT_PNG | IMG_INIT_JPG))) return false;
+
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        std::cerr << "SDL_mixer baslatilamadi! Hata: " << Mix_GetError() << std::endl;
+        return false;
+    }
+
+    win_w = width;
+    win_h = height;
 
     window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
     if (!window) return false;
@@ -200,11 +224,14 @@ bool GameEngine::initialize(const char* title, int width, int height) {
         std::cout << "Bilgi: 'assets/images/menu.jpg' bulunamadi, duz renk arka plan kullanilacak." << std::endl;
     }
 
-    if (!(IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) & (IMG_INIT_PNG | IMG_INIT_JPG))) return false;
-
     std::filesystem::create_directories("saves");
-    
     scan_images_directory();
+
+    bg_music = Mix_LoadMUS("assets/sounds/menu.mp3");
+    snap_sfx = Mix_LoadWAV("assets/sounds/snap.wav");
+    victory_sfx = Mix_LoadWAV("assets/sounds/victory.wav");
+
+    if (bg_music) Mix_PlayMusic(bg_music, -1);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -233,10 +260,18 @@ void GameEngine::run() {
             if (io.WantCaptureMouse) continue;
 
             if (current_state == GameState::PLAYING) {
-                int prev_locked = locked_pieces_count;
-                InputHandler::handle_mouse_event(event, pieces, selected_piece, locked_pieces_count, is_victory);
-                if (locked_pieces_count > prev_locked) {
+                bool snapped = false;
+                SDL_GetWindowSize(window, &win_w, &win_h);
+                
+                InputHandler::handle_mouse_event(event, pieces, selected_piece, locked_pieces_count, is_victory, win_w, win_h, snapped);
+                
+                if (snapped) {
+                    play_snap_sound(); 
                     save_game();
+                    
+                    if (is_victory && victory_sfx) {
+                        Mix_PlayChannel(-1, victory_sfx, 0);
+                    }
                 }
             }
         }
@@ -249,7 +284,6 @@ void GameEngine::run() {
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        // ==================== DURUM 1: ANA MENÜ VE GÖRSEL SEÇİM EKRANI ====================
         if (current_state == GameState::MAIN_MENU) {
             ImVec2 center = ImGui::GetMainViewport()->GetCenter();
             ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -323,7 +357,6 @@ void GameEngine::run() {
 
             ImGui::End();
         }
-        // ==================== DURUM 2: OYUN EKRANI ====================
         else if (current_state == GameState::PLAYING) {
             ImGui::Begin("Tesella Kontrol Paneli");
             ImGui::Text("Aktif Oyuncu: %s", username_buffer);
@@ -348,6 +381,7 @@ void GameEngine::run() {
             if (ImGui::Button("Kaydet ve Ana Menuye Don")) {
                 save_game();
                 current_state = GameState::MAIN_MENU;
+                if (bg_music) Mix_PlayMusic(bg_music, -1); // Ana menüye dönüldüğünde müziği tekrar başlat
             }
 
             if (!status_message.empty()) {
@@ -367,7 +401,6 @@ void GameEngine::run() {
                 SDL_RenderCopy(renderer, menu_bg_texture, NULL, NULL);
             }
         }
-
 
         if (current_state == GameState::PLAYING) {
             SDL_SetRenderDrawColor(renderer, 45, 45, 45, 255); 
@@ -412,6 +445,11 @@ void GameEngine::clean() {
         SDL_DestroyTexture(menu_bg_texture);
     }
 
+    if (snap_sfx) Mix_FreeChunk(snap_sfx);
+    if (victory_sfx) Mix_FreeChunk(victory_sfx);
+    if (bg_music) Mix_FreeMusic(bg_music);
+    Mix_CloseAudio();
+    
     IMG_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

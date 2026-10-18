@@ -12,7 +12,10 @@ public:
         std::vector<PuzzlePiece>& pieces,
         PuzzlePiece*& selected_piece,
         int& locked_pieces_count,
-        bool& is_victory
+        bool& is_victory,
+        int window_w,
+        int window_h,
+        bool& out_piece_snapped
     );
 };
 

@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h> 
 #include <SDL2/SDL_image.h>
 #include "puzzle_piece.h"
 #include "imgui.h"
@@ -60,10 +61,22 @@ private:
     int board_offset_y = 80;
     int board_w = 600;
     int board_h = 600;
+
+    int win_w = 1280;
+    int win_h = 720;
+
+    SDL_AudioDeviceID audio_device = 0;
+    Uint8* snap_wav_buffer = nullptr;
+    Uint32 snap_wav_length = 0;
+    void play_snap_sound();
     
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* preview_texture = nullptr; 
+
+    Mix_Music* bg_music = nullptr;
+    Mix_Chunk* snap_sfx = nullptr;
+    Mix_Chunk* victory_sfx = nullptr;
 
     std::vector<PuzzlePiece> pieces;
     PuzzlePiece* selected_piece = nullptr;

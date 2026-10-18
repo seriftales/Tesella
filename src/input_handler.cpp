@@ -7,8 +7,17 @@ void InputHandler::handle_mouse_event(
     std::vector<PuzzlePiece>& pieces,
     PuzzlePiece*& selected_piece,
     int& locked_pieces_count,
-    bool& is_victory
+    bool& is_victory,
+    int window_w,
+    int window_h,
+    bool& out_piece_snapped
 ) {
+    // Tıklama anındaki tutuş farkını (offset) koruyan statik değişkenler
+    static int drag_offset_x = 0;
+    static int drag_offset_y = 0;
+
+    out_piece_snapped = false;
+
     if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
         int mouse_x = event.button.x;
         int mouse_y = event.button.y;
@@ -20,21 +29,34 @@ void InputHandler::handle_mouse_event(
                 pieces.push_back(clicked_piece);
 
                 selected_piece = &pieces.back();
+
+                // 2. MADDE ÇÖZÜMÜ: Parçanın merkeze zıplamasını önlemek için tutulan noktayı kaydet
+                drag_offset_x = mouse_x - selected_piece->get_x();
+                drag_offset_y = mouse_y - selected_piece->get_y();
                 break;
             }
         }
     }
     else if (event.type == SDL_MOUSEMOTION) {
         if (selected_piece != nullptr) {
-            int center_offset_x = selected_piece->get_width() / 2;
-            int center_offset_y = selected_piece->get_height() / 2;
-            selected_piece->set_position(event.motion.x - center_offset_x, event.motion.y - center_offset_y);
+            int new_x = event.motion.x - drag_offset_x;
+            int new_y = event.motion.y - drag_offset_y;
+
+            // 1. MADDE ÇÖZÜMÜ: Parçanın pencere sınırlarından dışarı çıkmasını engelle (Clamping)
+            int max_x = std::max(0, window_w - selected_piece->get_width());
+            int max_y = std::max(0, window_h - selected_piece->get_height());
+
+            new_x = std::clamp(new_x, 0, max_x);
+            new_y = std::clamp(new_y, 0, max_y);
+
+            selected_piece->set_position(new_x, new_y);
         }
     }
     else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) {
         if (selected_piece != nullptr) {
             if (selected_piece->check_snap(50)) {
                 locked_pieces_count++;
+                out_piece_snapped = true; // Sesi tetikle!
                 std::cout << "Parca kilitlendi! Toplam: " << locked_pieces_count << " / " << pieces.size() << std::endl;
                 if (locked_pieces_count >= static_cast<int>(pieces.size())) {
                     is_victory = true;
