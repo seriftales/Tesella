@@ -81,6 +81,14 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 ```bash
 cmake --build . --config Release
 ```
+### Kendi Görsellerinizi Nasıl Eklersiniz?
+Oyuna yeni yapboz görselleri eklemek için herhangi bir kod değişikliğine gerek yoktur:
+
+Oynamak istediğiniz .png formatındaki görseli assets/images/puzzle/ klasörünün içine kopyalayın.
+
+Oyunu açın veya oyun açıksa ana menüdeki "Klasörü Yenile" butonuna tıklayın.
+
+Görseliniz otomatik olarak listede belirecektir; seçip zorluk derecesini ayarlayarak hemen oynamaya başlayabilirsiniz.
 
 ### Proje Dizin Yapısı 
 ```text
