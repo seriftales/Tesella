@@ -44,8 +44,8 @@ sudo apt install build-essential cmake libsdl2-dev libsdl2-image-dev libsdl2-mix
 **2. Projeyi klonlayın ve dizine girin:**
 
 ```bash
-git clone [https://github.com/seriftales/Tesella.git](https://github.com/seriftales/Tesella.git)
-cd Tesella
+git clone [https://github.com/seriftales/tesella.git](https://github.com/seriftales/tesella.git)
+cd tesella
 ```
 **3. CMake ile projeyi derleyin:**
 
@@ -92,7 +92,7 @@ Görseliniz otomatik olarak listede belirecektir; seçip zorluk derecesini ayarl
 
 ### Proje Dizin Yapısı 
 ```text
-Tesella/
+tesella/
 ├── assets/
 │   ├── images/
 │   │   ├── puzzle/              # Yapboz olarak oynanacak görsellerin eklendiği klasör
